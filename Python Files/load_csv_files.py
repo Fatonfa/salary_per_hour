@@ -13,7 +13,9 @@ try:
         'employees',
         'timesheets'
     ]
+    
     print('data ingestion started')
+    
     #define db properties and connection
     db_user=os.getenv('DB_USER')
     db_password=os.getenv('DB_PASSWORD')
@@ -25,14 +27,21 @@ try:
 
     # iterate each csv file
     for val in csv_name:
+        #read csv files
         df = pd.read_csv('../CSV/'+val+'.csv')
+        
+        #add new column `etl_datetime`
         df['etl_datetime'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        #load data to DB
         df.to_sql(val, con=conn, if_exists='replace', index=False)
         
         #create staging table
         conn.execute('create schema if not exists stg;')
         conn.execute(f'drop table stg.{val}; create table stg.{val} as select * from public.{val};')
+        
     print('data ingestion finished')
+    
 except Exception as e:
     print(f'Something went wrong, {e}')
 finally:

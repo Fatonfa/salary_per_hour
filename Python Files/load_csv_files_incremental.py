@@ -14,12 +14,14 @@ try:
         'timesheets'
     ]
 
+    #define pkey on each table
     table_pkey = [
         'employe_id',
         'timesheet_id'
     ]
     
     print('data ingestion started')
+    
     #define db properties and connection
     db_user=os.getenv('DB_USER')
     db_password=os.getenv('DB_PASSWORD')
@@ -29,16 +31,25 @@ try:
     db = create_engine(conn_string)
     conn = db.connect()
 
-    ### iterate each csv file
+    # iterate each csv file
     for i in range(len(csv_name)):
         val = csv_name[i]
         pkey = table_pkey[i]
         
         #read csv
         df = pd.read_csv('../CSV/'+val+'.csv')
+        
+        #add new column `etl_datetimg`
         df['etl_datetime'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        #load data to DB
         df.to_sql(val, con=conn, if_exists='replace', index=False)
+        
         print(f'{val} data ingested')
+        
+        #################
+        ## Incremental ##
+        #################
         
         # read data from raw and staging
         raw_data = pd.read_sql(f""" select {pkey} as pkey, * from public.{val}; """, conn)
@@ -57,6 +68,7 @@ try:
         new_data.to_sql(f'{val}', con=conn, if_exists='append', index=False, schema='stg')
 
     print('incremental finished')
+    
 except Exception as e:
     print(f'Something went wrong. {e}')
 finally:
